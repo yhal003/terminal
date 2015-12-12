@@ -20,61 +20,88 @@ func (s *AutomataSuite) TestReject1(c *C) {
 func (s *AutomataSuite) TestReject2(c *C) {
 	x := &automata.AlwaysReject{}
 	x.Feed('a')
-	// AlwaysReject goes not accept string 'a'
+	// AlwaysReject does not accept string 'a'
 	c.Assert(x.GetState(),Equals, automata.REJECTED)
 }
 
 
-func TestSequenceEmpty1(t *testing.T) {
+func (s *AutomataSuite) TestSequenceEmpty1(c *C) {
 	a := automata.MakeSequence([]byte{})
-	if (a.GetState() != automata.ACCEPTED) {
-		t.Fatalf("empty sequence must init in accepted state")
-	}
+	// empty sequence accepts empty string 
+	c.Assert(a.GetState(),Equals, automata.ACCEPTED)
 }
 
-func TestSequenceEmpty2(t *testing.T) {
+func (s *AutomataSuite) TestSequenceEmpty2(c *C) {
 	a := automata.MakeSequence([]byte{})
 	a.Feed('a')
 	a.Feed('b')
-	if (a.GetState() != automata.REJECTED) {
-		t.Fatalf("empty sequence must not accept non-empty string")
-	}
+	// empty sequence does not accept non-empty string 'ab'
+	c.Assert(a.GetState(),Equals, automata.REJECTED)
 }
 
-func TestSequenceSimple1(t *testing.T) {
+func (s *AutomataSuite) TestSequenceSimple1(c *C) {
 	a := automata.MakeSequence([]byte{1})
 	a.Feed(byte(1))
-	if (a.GetState() != automata.ACCEPTED) {
-		t.Fatalf("simple sequence must accept byte 1 ")
-	}
+	// sequence automata accepts string '0x1'
+	c.Assert(a.GetState(),Equals, automata.ACCEPTED)
 }
 
-func TestSequenceSimple2(t *testing.T) {
+func (s *AutomataSuite) TestSequenceSimple2(c *C) {
 	a := automata.MakeSequence([]byte{1,3,4})
 	a.Feed(byte(1))
 	a.Feed(byte(3))
 	a.Feed(byte(4))
-	if (a.GetState() != automata.ACCEPTED) {
-		t.Fatalf("simple sequence must accept bytes 1 3 4 ")
-	}
+	// sequence automata accepts string '0x1 0x3 0x4'
+	c.Assert(a.GetState(),Equals, automata.ACCEPTED)
 	a.Feed(byte(2))
-	if (a.GetState() != automata.REJECTED) {
-		t.Fatalf("simple sequence reject byte 2 ")
-	}
+	// sequence automata rejects string '0x1 0x3 0x4 0x2'
+	c.Assert(a.GetState(),Equals, automata.REJECTED)
 }
 
-func TestStarSimple(t *testing.T){
+func (s *AutomataSuite) TestStarSimple(c *C){
 	fa := func() automata.Automata {
 		return automata.MakeSequence([]byte{'a'})
 	}
-	s := automata.MakeStar(fa)
-	if (s.GetState() != automata.RUNNING) {
-		t.Fatalf("a* must start from running")
+	star := automata.MakeStar(fa)
+	// a* must start with RUNNING state
+	c.Assert(star.GetState(),Equals, automata.RUNNING)
+	star.Feed('a')
+	// a* must accept 'a'
+	c.Assert(star.GetState(),Equals, automata.ACCEPTED)
+	star.Feed('a')
+	// a* must accept 'aa'
+	c.Assert(star.GetState(),Equals, automata.ACCEPTED)
+	star.Feed('b')
+	// a* must reject 'aab'
+	c.Assert(star.GetState(),Equals, automata.REJECTED)
+	star.Feed('a')
+	// a* must reject 'aaba'
+	c.Assert(star.GetState(),Equals, automata.REJECTED)
+}
+
+func (s *AutomataSuite) TestStarABC(c *C) {
+	fa := func() automata.Automata {
+		return automata.MakeSequence([]byte{'a','b','c'})
 	}
-	s.Feed('a')
-	if (s.GetState() != automata.ACCEPTED) {
-		t.Fatalf("a* must accept  a")
-	}
+	star := automata.MakeStar(fa)
+	// (abc)* must start with RUNNING state
+	c.Assert(star.GetState(),Equals, automata.RUNNING)
+	star.Feed('a')
+	// (abc)* is running at 'a'
+	c.Assert(star.GetState(),Equals, automata.RUNNING)
+	star.Feed('b')
+	// (abc)* is running at 'ab'
+	c.Assert(star.GetState(),Equals, automata.RUNNING)
+	star.Feed('c')
+	// (abc)* is accepting at 'abc'
+	c.Assert(star.GetState(),Equals, automata.ACCEPTED)
+	star.Feed('a')
+	// (abc)* is running at 'abca'
+	c.Assert(star.GetState(),Equals, automata.RUNNING)
+	star.Feed('d')
+	// (abc)* is rejecting at 'abcad'
+	c.Assert(star.GetState(),Equals, automata.REJECTED)
+	
 }
 
 
